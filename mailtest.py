@@ -11,8 +11,8 @@ from email.mime.application import MIMEApplication
 # Email credentials and settings
 def sendEmail(to_email):
         # from bettersuper import customermail
-        # to_email = 'omar.future.123@gmail.com'
-        from_email = 'omarelsawy160@gmail.com'
+        # to_email = ''
+        from_email = ''
         subject = 'PDF Attachment Test'
         smtp_server = 'smtp.example.com'
         smtp_port = 587
@@ -33,7 +33,7 @@ def sendEmail(to_email):
         smtp_obj = smtplib.SMTP('smtp.gmail.com', 587)
         smtp_obj.ehlo()
         smtp_obj.starttls()
-        smtp_obj.login('omarelsawy160@@gmail.com', 'qxnsyaxbqeatgtxs')
+        smtp_obj.login('', '')
         smtp_obj.sendmail(from_email, to_email, message.as_string())
         smtp_obj.quit()
-# sendEmail('omar.future.123@gmail.com')
+# sendEmail('')
