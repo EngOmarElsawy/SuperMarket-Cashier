@@ -18,14 +18,14 @@
 #     #         body = f"Dear recipient,\n\nThis is to notify you that the {results[i][0]} is about to finish. Please take necessary action as soon as possible.\n\nBest regards,\nThe Supermarket System"
 
 #     #         # Email addresses
-#     #         sender_email = "omarelsawy160@gmail.com"
-#     #         recipient_email = "omar.future.123@gmail.com"
+#     #         sender_email = ""
+#     #         recipient_email = ""
 
 #     #         # Email server settings
-#     #         smtp_server = "smtp.gmail.com"
-#     #         smtp_port = 587
-#     #         smtp_username = "omarelsawy160@gmail.com"
-#     #         smtp_password = "qxnsyaxbqeatgtxs"
+#     #         smtp_server = ""
+#     #         smtp_port = 
+#     #         smtp_username = ""
+#     #         smtp_password = ""
 
 #     #         # Create the email message
 #     #         msg = MIMEText(body)
