@@ -127,7 +127,7 @@ Label(root, text='ادارة المشتريات', fg='white', bg=mainColor, font
 # ============ State Variables ============
 quantities      = [[IntVar() for _ in items] for _, items in PRODUCTS]
 total_vars      = [StringVar(value='$0') for _ in PRODUCTS]
-grand_total_var = StringVar(value='Grand Total:  $0')
+grand_total_var = StringVar(value='$0')
 customername    = StringVar()
 customerphone   = StringVar()
 customerfatora  = StringVar(value=str(random.randint(1000, 9999)))
@@ -148,7 +148,7 @@ def update_live_total(*_):
         for i, v in enumerate(total_vars):
             v.set(f'${totals[i]:,}')
         grand = sum(totals)
-        grand_total_var.set(f'Grand Total:  ${grand:,}')
+        grand_total_var.set(f'${grand:,}')
         root.title(f'Supermarket  ·  ${grand:,}')
     except Exception:
         pass
@@ -533,7 +533,7 @@ F1 = Frame(root, bd=0, width=416, height=235, bg='#0B4C5F')
 F1.place(x=1082, y=35)
 F1.grid_propagate(False)
 F1.grid_columnconfigure(0, weight=1)    # entry side (left)
-F1.grid_columnconfigure(1, minsize=160) # label side (right)
+F1.grid_columnconfigure(1, minsize=185) # label side (right) — wide enough for البريد الالكتروني
 
 Label(F1, text='بيانات المشتري', font=('tajawal', 13, 'bold'),
       bg='#0B4C5F', fg='tomato').grid(row=0, column=0, columnspan=2, pady=(6, 4))
@@ -581,31 +581,41 @@ textarea.tag_configure('total',   font=('Courier', 11, 'bold'), foreground='#0B2
 F4 = Frame(root, bd=0, width=1500, height=130, bg='#0B4C5F')
 F4.place(x=0, y=688)
 
-# Totals section — left side (x=8..330)
-cat_labels = ['الحساب الكلي للبقوليات', 'حساب اللوازم المنزلية', 'حساب ادوات الكهرباء']
-for i, (lbl, var) in enumerate(zip(cat_labels, total_vars)):
-    Label(F4, text=lbl, font=(mainFont, 10, 'bold'), bg=frameBg, fg=CAT_COLORS[i]).place(x=148, y=10 + i * 32)
-    Entry(F4, textvariable=var, width=16, state=DISABLED,
-          disabledforeground='white', disabledbackground='#0D3A4A').place(x=8, y=12 + i * 32)
+# ── Totals sub-frame: grid-managed so labels never bleed into buttons ──
+tot = Frame(F4, bg=frameBg, width=330, height=128)
+tot.place(x=1, y=1)
+tot.grid_propagate(False)
+tot.grid_columnconfigure(0, weight=1)      # entry (grows)
+tot.grid_columnconfigure(1, minsize=148)   # label (fixed, fits longest Arabic text)
 
-Label(F4, text='الاجمالي الكلي', font=(mainFont, 10, 'bold'), bg=frameBg, fg='gold').place(x=148, y=106)
-Entry(F4, textvariable=grand_total_var, width=16, state=DISABLED,
-      disabledforeground='gold', disabledbackground='#0B2F3A',
-      font=(mainFont, 10, 'bold')).place(x=8, y=104)
+_tot_rows = [
+    ('البقوليات',    total_vars[0],   'white', '#0D3A4A', CAT_COLORS[0], False),
+    ('المنزليات',    total_vars[1],   'white', '#0D3A4A', CAT_COLORS[1], False),
+    ('الكهربائيات',  total_vars[2],   'white', '#0D3A4A', CAT_COLORS[2], False),
+    ('الإجمالي الكلي', grand_total_var, 'gold', '#0B2F3A', 'gold',       True),
+]
+for _i, (_lbl, _var, _fg, _ebg, _lclr, _bold) in enumerate(_tot_rows):
+    Label(tot, text=_lbl, font=(mainFont, 10, 'bold'),
+          bg=frameBg, fg=_lclr).grid(
+        row=_i, column=1, sticky='e', padx=(4, 10), pady=3)
+    Entry(tot, textvariable=_var, width=11, state=DISABLED,
+          disabledforeground=_fg, disabledbackground=_ebg,
+          font=(mainFont, 10, 'bold') if _bold else (mainFont, 10)).grid(
+        row=_i, column=0, sticky='ew', padx=(8, 4), pady=3)
 
-# Buttons — 3 columns × 3 rows starting at x=350
-# Column A (x=350)
-styled_btn(F4, text='افراغ الحقول',     width=14, command=Clear).place(            x=350, y=8)
-styled_btn(F4, text='تقرير المبيعات',   width=14, command=show_report).place(      x=350, y=48)
+# ── Buttons: 3 columns × 3 rows, safely right of the totals sub-frame ──
+# Column A (x=345)
+styled_btn(F4, text='افراغ الحقول',     width=14, command=Clear).place(            x=345, y=8)
+styled_btn(F4, text='تقرير المبيعات',   width=14, command=show_report).place(      x=345, y=50)
 styled_btn(F4, text='اغلاق البرنامج',   width=14, command=root.quit,
-           bg='#8B2020').place(                                                     x=350, y=88)
-# Column B (x=520)
-styled_btn(F4, text='تعديل الأسعار',    width=14, command=show_price_editor).place(x=520, y=8)
-styled_btn(F4, text='عرض العملاء',      width=14, command=show_customer_db).place( x=520, y=48)
-# Column C (x=690)
-styled_btn(F4, text='الحساب',           width=14, command=total).place(            x=690, y=8)
-styled_btn(F4, text='تصدير الفاتورة',   width=14, command=Print).place(            x=690, y=48)
-styled_btn(F4, text='فاتورة الكترونية', width=14, command=Send).place(             x=690, y=88)
+           bg='#8B2020').place(                                                     x=345, y=92)
+# Column B (x=510)
+styled_btn(F4, text='تعديل الأسعار',    width=14, command=show_price_editor).place(x=510, y=8)
+styled_btn(F4, text='عرض العملاء',      width=14, command=show_customer_db).place( x=510, y=50)
+# Column C (x=675)
+styled_btn(F4, text='الحساب',           width=14, command=total).place(            x=675, y=8)
+styled_btn(F4, text='تصدير الفاتورة',   width=14, command=Print).place(            x=675, y=50)
+styled_btn(F4, text='فاتورة الكترونية', width=14, command=Send).place(             x=675, y=92)
 
 # ============ UI: Product Frames — grid layout (no fixed pixel overlaps) ============
 FRAME_CONFIGS = [(1, 318, 650), (321, 318, 650), (641, 338, 600)]
