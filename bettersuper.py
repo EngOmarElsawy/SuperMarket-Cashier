@@ -119,7 +119,7 @@ CAT_COLORS = ['#5DBB63', '#64B5F6', '#FFB74D']
 
 # ============ Root Window ============
 root = Tk()
-root.geometry('1330x800+30+10')
+root.geometry('1500x820+30+10')
 root.title('Supermarket')
 root.resizable(False, False)
 Label(root, text='ادارة المشتريات', fg='white', bg=mainColor, font=('tajawal', 15)).pack(fill=X)
@@ -419,12 +419,121 @@ def show_price_editor():
     styled_btn(win, text='  Save All Prices  ', font=(mainFont, 11, 'bold'),
                command=save_prices).pack(pady=10)
 
+# ============ Customer Database Viewer ============
+def show_customer_db():
+    win = Toplevel(root)
+    win.title('Customer Database — قاعدة بيانات العملاء')
+    win.geometry('900x560')
+    win.configure(bg=mainColor)
+    win.resizable(True, True)
+
+    Label(win, text='Customer Database  —  قاعدة بيانات العملاء',
+          font=(mainFont, 14, 'bold'), bg=mainColor, fg='gold').pack(pady=(10, 4))
+
+    # Search bar
+    bar = Frame(win, bg='#0B4C5F', pady=6)
+    bar.pack(fill=X, padx=15, pady=(0, 6))
+    Label(bar, text='بحث / Search:', bg='#0B4C5F', fg='#AAD4E8',
+          font=(mainFont, 11)).pack(side=RIGHT, padx=(10, 6))
+    search_var = StringVar()
+    Entry(bar, textvariable=search_var, font=(mainFont, 11), width=28, relief='flat',
+          highlightthickness=1, highlightbackground='#1A6080').pack(side=RIGHT, padx=4)
+
+    # Treeview
+    tv_style = ttk.Style(win)
+    tv_style.theme_use('default')
+    tv_style.configure('Cust.Treeview',
+        background='#0D3A4A', foreground='white', fieldbackground='#0D3A4A',
+        rowheight=28, font=(mainFont, 10))
+    tv_style.configure('Cust.Treeview.Heading',
+        background='#0B2F3A', foreground='#DBA901',
+        font=(mainFont, 11, 'bold'), relief='flat')
+    tv_style.map('Cust.Treeview', background=[('selected', '#1A6B8A')])
+
+    table_frame = Frame(win, bg=mainColor)
+    table_frame.pack(fill=BOTH, expand=True, padx=15)
+
+    cols = ('الاسم', 'رقم الهاتف', 'رقم الفاتورة', 'العنوان')
+    tree = ttk.Treeview(table_frame, columns=cols, show='headings',
+                        height=18, style='Cust.Treeview')
+    sort_rev = {}
+    for col, w in zip(cols, (200, 150, 110, 300)):
+        tree.heading(col, text=col, command=lambda c=col: sort_col(c))
+        tree.column(col, width=w, anchor='center')
+    tree.tag_configure('even', background='#0B4C5F')
+    tree.tag_configure('odd',  background='#0D3A4A')
+
+    vsb = ttk.Scrollbar(table_frame, orient=VERTICAL,   command=tree.yview)
+    hsb = ttk.Scrollbar(table_frame, orient=HORIZONTAL, command=tree.xview)
+    tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+    tree.grid(row=0, column=0, sticky='nsew')
+    vsb.grid(row=0, column=1, sticky='ns')
+    hsb.grid(row=1, column=0, sticky='ew')
+    table_frame.grid_rowconfigure(0, weight=1)
+    table_frame.grid_columnconfigure(0, weight=1)
+    tree.bind('<MouseWheel>', lambda e: tree.yview_scroll(-1 * (e.delta // 120), 'units'))
+
+    def load_data(filter_text=''):
+        for row in tree.get_children():
+            tree.delete(row)
+        if filter_text:
+            cr.execute(
+                "SELECT customer_name, customer_phone, customer_bill, customer_address "
+                "FROM Customer WHERE customer_name LIKE ? OR customer_phone LIKE ? OR customer_bill LIKE ?",
+                (f'%{filter_text}%', f'%{filter_text}%', f'%{filter_text}%'))
+        else:
+            cr.execute(
+                "SELECT customer_name, customer_phone, customer_bill, customer_address FROM Customer")
+        for idx, row in enumerate(cr.fetchall()):
+            tree.insert('', END,
+                values=(row[0] or '—', row[1] or '—', row[2] or '—', row[3] or '—'),
+                tags=('even' if idx % 2 == 0 else 'odd',))
+        count_lbl.config(text=f'  {len(tree.get_children())} record(s)')
+
+    def sort_col(col):
+        data = [(tree.set(k, col), k) for k in tree.get_children('')]
+        rev = sort_rev.get(col, False)
+        data.sort(key=lambda x: x[0], reverse=rev)
+        sort_rev[col] = not rev
+        for idx, (_, k) in enumerate(data):
+            tree.move(k, '', idx)
+            tree.item(k, tags=('even' if idx % 2 == 0 else 'odd',))
+
+    search_var.trace_add('write', lambda *_: load_data(search_var.get().strip()))
+
+    def delete_selected():
+        sel = tree.selection()
+        if not sel:
+            return
+        vals = tree.item(sel[0])['values']
+        if messagebox.askyesno('حذف / Delete',
+                               f'Delete customer record?\n{vals[0]}  —  Bill #{vals[2]}',
+                               parent=win):
+            cr.execute("DELETE FROM Customer WHERE customer_name=? AND customer_bill=?",
+                       (vals[0], vals[2]))
+            db.commit()
+            load_data(search_var.get().strip())
+
+    # Bottom bar
+    bot = Frame(win, bg=mainColor, pady=6)
+    bot.pack(fill=X, padx=15)
+    count_lbl = Label(bot, text='', bg=mainColor, fg='#AAD4E8', font=(mainFont, 10))
+    count_lbl.pack(side=LEFT)
+    styled_btn(bot, text='حذف المحدد / Delete', command=delete_selected,
+               bg='#8B2020', font=(mainFont, 10)).pack(side=RIGHT, padx=4)
+    styled_btn(bot, text='تحديث / Refresh',
+               command=lambda: load_data(search_var.get().strip()),
+               font=(mainFont, 10)).pack(side=RIGHT, padx=4)
+
+    load_data()
+
+
 # ============ UI: Customer Frame — grid layout ============
-F1 = Frame(root, bd=0, width=340, height=240, bg='#0B4C5F')
-F1.place(x=988, y=35)
+F1 = Frame(root, bd=0, width=416, height=235, bg='#0B4C5F')
+F1.place(x=1082, y=35)
 F1.grid_propagate(False)
 F1.grid_columnconfigure(0, weight=1)    # entry side (left)
-F1.grid_columnconfigure(1, minsize=140) # label side (right)
+F1.grid_columnconfigure(1, minsize=160) # label side (right)
 
 Label(F1, text='بيانات المشتري', font=('tajawal', 13, 'bold'),
       bg='#0B4C5F', fg='tomato').grid(row=0, column=0, columnspan=2, pady=(6, 4))
@@ -443,17 +552,17 @@ styled_btn(btn_row, text='اضافة', font=('tajawal', 11), width=9,
            command=Database_Add,    bg='white').pack(side=LEFT, padx=8)
 
 # ============ UI: Bill Header + Frame ============
-bill_hdr = Frame(root, width=340, height=26, bg='#072030')
-bill_hdr.place(x=988, y=277)
+bill_hdr = Frame(root, width=416, height=26, bg='#072030')
+bill_hdr.place(x=1082, y=272)
 Label(bill_hdr, text='  الفاتورة  ·  Receipt',
       font=('tajawal', 10, 'bold'), bg='#072030', fg='#DBA901').place(x=8, y=3)
 
-F3 = Frame(root, bd=0, bg='#F7F5EE', width=340, height=390)
-F3.place(x=988, y=303)
+F3 = Frame(root, bd=0, bg='#F7F5EE', width=416, height=384)
+F3.place(x=1082, y=300)
 scroll_y = Scrollbar(F3, orient=VERTICAL)
-textarea = Text(F3, bg='#F7F5EE', fg='#1A1A1A', width=33, height=22,
-                font=('Courier', 10), yscrollcommand=scroll_y.set,
-                padx=4, pady=4, wrap=NONE)
+textarea = Text(F3, bg='#F7F5EE', fg='#1A1A1A', width=40, height=24,
+                font=('Courier', 11), yscrollcommand=scroll_y.set,
+                padx=6, pady=6, wrap=NONE)
 scroll_y.pack(side=RIGHT, fill=Y)
 scroll_y.config(command=textarea.yview)
 textarea.pack(fill=BOTH, expand=True)
@@ -468,32 +577,38 @@ textarea.tag_configure('cat_hdr', font=('Courier', 9, 'bold'),  foreground='#888
 textarea.tag_configure('item',    font=('Courier', 10),         foreground='#111111')
 textarea.tag_configure('total',   font=('Courier', 11, 'bold'), foreground='#0B2F3A')
 
-# ============ UI: Controls Frame ============
-F4 = Frame(root, bd=0, width=800, height=130, bg='#0B4C5F')
-F4.place(x=640, y=668)
+# ============ UI: Controls Frame (full-width bottom strip) ============
+F4 = Frame(root, bd=0, width=1500, height=130, bg='#0B4C5F')
+F4.place(x=0, y=688)
 
+# Totals section — left side (x=8..330)
 cat_labels = ['الحساب الكلي للبقوليات', 'حساب اللوازم المنزلية', 'حساب ادوات الكهرباء']
 for i, (lbl, var) in enumerate(zip(cat_labels, total_vars)):
-    Label(F4, text=lbl, font=(mainFont, 10, 'bold'), bg=frameBg, fg=CAT_COLORS[i]).place(x=235, y=10 + i * 30)
-    Entry(F4, textvariable=var, width=24, state=DISABLED,
-          disabledforeground='white', disabledbackground='#0D3A4A').place(x=2, y=12 + i * 30)
+    Label(F4, text=lbl, font=(mainFont, 10, 'bold'), bg=frameBg, fg=CAT_COLORS[i]).place(x=148, y=10 + i * 32)
+    Entry(F4, textvariable=var, width=16, state=DISABLED,
+          disabledforeground='white', disabledbackground='#0D3A4A').place(x=8, y=12 + i * 32)
 
-Label(F4, text='الاجمالي الكلي', font=(mainFont, 10, 'bold'), bg=frameBg, fg='gold').place(x=235, y=100)
-Entry(F4, textvariable=grand_total_var, width=24, state=DISABLED,
+Label(F4, text='الاجمالي الكلي', font=(mainFont, 10, 'bold'), bg=frameBg, fg='gold').place(x=148, y=106)
+Entry(F4, textvariable=grand_total_var, width=16, state=DISABLED,
       disabledforeground='gold', disabledbackground='#0B2F3A',
-      font=(mainFont, 10, 'bold')).place(x=2, y=100)
+      font=(mainFont, 10, 'bold')).place(x=8, y=104)
 
-styled_btn(F4, text='الحساب',           width=14, command=total).place(           x=525, y=10)
-styled_btn(F4, text='تصدير الفاتورة',   width=14, command=Print).place(           x=525, y=48)
-styled_btn(F4, text='فاتورة الكترونية', width=14, command=Send).place(            x=525, y=86)
-styled_btn(F4, text='تعديل الأسعار',    width=13, command=show_price_editor).place(x=365, y=86)
-styled_btn(F4, text='تقرير المبيعات',   width=13, command=show_report).place(     x=365, y=48)
-styled_btn(F4, text='افراغ الحقول',     width=13, command=Clear).place(           x=365, y=10)
-styled_btn(F4, text='اغلاق البرنامج',   width=12, command=root.quit,
-           bg='#8B2020').place(x=250, y=48)
+# Buttons — 3 columns × 3 rows starting at x=350
+# Column A (x=350)
+styled_btn(F4, text='افراغ الحقول',     width=14, command=Clear).place(            x=350, y=8)
+styled_btn(F4, text='تقرير المبيعات',   width=14, command=show_report).place(      x=350, y=48)
+styled_btn(F4, text='اغلاق البرنامج',   width=14, command=root.quit,
+           bg='#8B2020').place(                                                     x=350, y=88)
+# Column B (x=520)
+styled_btn(F4, text='تعديل الأسعار',    width=14, command=show_price_editor).place(x=520, y=8)
+styled_btn(F4, text='عرض العملاء',      width=14, command=show_customer_db).place( x=520, y=48)
+# Column C (x=690)
+styled_btn(F4, text='الحساب',           width=14, command=total).place(            x=690, y=8)
+styled_btn(F4, text='تصدير الفاتورة',   width=14, command=Print).place(            x=690, y=48)
+styled_btn(F4, text='فاتورة الكترونية', width=14, command=Send).place(             x=690, y=88)
 
 # ============ UI: Product Frames — grid layout (no fixed pixel overlaps) ============
-FRAME_CONFIGS = [(1, 318, 760), (321, 318, 760), (641, 338, 640)]
+FRAME_CONFIGS = [(1, 318, 650), (321, 318, 650), (641, 338, 600)]
 for cat_idx, (cat_name, items) in enumerate(PRODUCTS):
     x, w, h = FRAME_CONFIGS[cat_idx]
     frame = Frame(root, bd=0, width=w, height=h, bg=frameBg)
