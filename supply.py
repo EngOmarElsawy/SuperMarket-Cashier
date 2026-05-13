@@ -1,134 +1,92 @@
-# from bettersuper import mainFont,mainColor,frameBg
 from tkinter import *
-from tkinter import ttk
-import tkinter as tk
-from tkinter import messagebox
-from datetime import datetime
+from tkinter import ttk, messagebox
 import sqlite3
-# ============ Fonts and Colors =============
-mainFont = 'tajawal'
-mainColor = '#0B2F3A' 
-frameBg = '#0B4C5F'
-#=================== Setting Screen ==================
+import configparser
+import smtplib
+
+mainFont  = 'tajawal'
+mainColor = '#0B2F3A'
+frameBg   = '#0B4C5F'
+
 root = Tk()
-root = root
 root.geometry('1330x800+30+10')
 root.configure(background=frameBg)
-root.title('Supermarket')
-root.resizable(True,True)
-root.iconbitmap('D:/Omar/Codezilla/Images/iice.ico')
-title = Label(  root,text='ادارة المخزون',fg='white',bg=mainColor, font=('tajawal',15))
-title.pack(fill=X)
-# root.iconbitmap('../Downloads/311804053_3448602958752567_1147801703367297556_n')
-
-# Create the root window
-def mailAlert(current_amount,item_name,required_amount):
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    from email.mime.application import MIMEApplication
+root.title('Supermarket - Inventory')
+root.resizable(True, True)
+Label(root, text='ادارة المخزون', fg='white', bg=mainColor, font=('tajawal', 15)).pack(fill=X)
 
 
-# email information
-    from_email = "omarelsawy160@gmail.com"
-    to_email = "omar.future.123@gmail.com"
-    password = "qxnsyaxbqeatgtxs"
-
-    # item information
-    # item_name = 
-    # current_amount =  
-    # required_amount = 0.
-    if current_amount < required_amount:
-        message = f"Subject: {item_name} supply low\n\nThe current amount of {item_name} is {current_amount}, which is less than the required amount of {required_amount}. Please restock as soon as possible."
-        with smtplib.SMTP("smtp.gmail.com", 587) as connection:
-            connection.starttls()
-            connection.login(from_email, password)
-            connection.sendmail(from_email, to_email, message)
-            print(f"Email sent to {to_email}")
-    else:
-        print(f"The current amount of {item_name} is sufficient")
-
-
-# Create the table
-table = ttk.Treeview(root, columns=('col1', 'col2', 'col3', 'col4', 'col5', 'col6','col7','col8','col9'), show='headings',height=40)
+def mailAlert(current_amount, item_name, required_amount):
+    config        = configparser.ConfigParser()
+    config.read('config.ini')
+    from_email    = config['email']['from_email']
+    password      = config['email']['password']
+    manager_email = config['email']['manager_email']
+    message = (
+        f"Subject: Low Stock Alert - {item_name}\n\n"
+        f"The current amount of {item_name} is {current_amount}, "
+        f"which is below the required threshold of {required_amount:.0f}. "
+        f"Please restock as soon as possible."
+    )
+    with smtplib.SMTP("smtp.gmail.com", 587) as conn:
+        conn.starttls()
+        conn.login(from_email, password)
+        conn.sendmail(from_email, manager_email, message)
+    print(f"Low-stock alert sent for {item_name}")
 
 
-# Add 19 rows to every column
-itemList2 = ['الرز', 'البرغل', 'قاسوليا', 'عدس', 'معكرونة', 'فريكة', 'حمص', 'فول', 'طعمية', 'بذنجان', 'بطاطس', 'ترمس حلو', 'بسلة', 'قلقاس', 'بميا', 'الترمس', 'اللوبيا', 'البازلاء', 'عدس احمر', 'عدس اخضر', 'الادمامي']
-itemsList1 = ['تلفزيون', 'غسالة', 'ثلاجة', 'مكرويف', 'خلاط', 'مقلاة كهربائية', 'راديو', 'بلاي ستيشن', 'فلتر ماء', 'مكواة', 'مبرد', 'مروحة ارضية', 'تكييف', 'فرن غاز', 'مكنسة', 'سخان', 'مشترك كهربائي', 'شاشة كمبيوتر', 'مروحة سقف']
-itemList3 = ['مصفاة', 'صحن', 'كأس', 'سكين', 'شوك', 'طنجرة', 'ملعقة', 'شاحن', 'سلة', 'صينية', 'وعاء الخلط', 'فتاحة العلب', 'مقشرة', 'محفظة', 'اكياس', 'سلة قمامة', 'اكواب', 'علب', 'لوحة التقطيع', 'حفارة', 'كبشة']
+# ============ Item Name Lists ============
+itemList_food  = ['الرز', 'البرغل', 'قاسوليا', 'عدس', 'معكرونة', 'فريكة', 'حمص', 'فول', 'طعمية',
+                  'بذنجان', 'بطاطس', 'ترمس حلو', 'بسلة', 'قلقاس', 'بميا', 'الترمس', 'اللوبيا',
+                  'البازلاء', 'عدس احمر', 'عدس اخضر', 'الادمامي']
+itemList_elec  = ['تلفزيون', 'غسالة', 'ثلاجة', 'مكرويف', 'خلاط', 'مقلاة كهربائية', 'راديو',
+                  'بلاي ستيشن', 'فلتر ماء', 'مكواة', 'مبرد', 'مروحة ارضية', 'تكييف', 'فرن غاز',
+                  'مكنسة', 'سخان', 'مشترك كهربائي', 'شاشة كمبيوتر', 'مروحة سقف']
+itemList_house = ['مصفاة', 'صحن', 'كأس', 'سكين', 'شوك', 'طنجرة', 'ملعقة', 'شاحن', 'سلة', 'صينية',
+                  'وعاء الخلط', 'فتاحة العلب', 'مقشرة', 'محفظة', 'اكياس', 'سلة قمامة', 'اكواب',
+                  'علب', 'لوحة التقطيع', 'حفارة', 'كبشة']
+
+# ============ Database ============
 db = sqlite3.connect('mydatabase.db')
 cr = db.cursor()
-cr.execute("select * from Foods")
+cr.execute("SELECT * FROM Foods")
 results = cr.fetchall()
-for i in range(len(itemsList1)):
-    table.insert("", "end", values=('\t'))
-    table.insert("", "end", values=(itemsList1[i],results[i][4],results[i][5],itemList2[i],results[i][1],results[i][2],itemList3[i],results[i][7],results[i][8]))
-for i in range(9):    
-    table.column(f'col{i+1}',anchor='e',)
-    table.tag_configure(f'col{i+1}',background='gray',foreground='white')
-    table.column(f'col{i+1}', width=200, stretch=False,anchor='center')
-    # table.tag_configure(f'col{i+1}',)
 
-table.heading('col1', text='الادوات الكهربائية',anchor='e')
-table.heading('col2', text='الكمية',anchor='e')
-table.heading('col3', text=' السعر',anchor='e')
-table.heading('col4', text=' الاغذية',anchor='e')
-table.heading('col5', text=' الكمية',anchor='e')
-table.heading('col6', text='السعر',anchor="e")
-table.heading('col7', text='اللوازم المنزلية',anchor='e')
-table.heading('col8', text='الكمية',anchor='e')
-table.heading('col9', text='السعر',anchor="e")
+# ============ Inventory Table ============
+cols = ('col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7', 'col8', 'col9')
+table = ttk.Treeview(root, columns=cols, show='headings', height=40)
+headers = ['الادوات الكهربائية', 'الكمية', 'السعر', 'الاغذية', 'الكمية', 'السعر', 'اللوازم المنزلية', 'الكمية', 'السعر']
+for col, header in zip(cols, headers):
+    table.heading(col, text=header, anchor='e')
+    table.column(col, width=200, stretch=False, anchor='center')
+
+for i, row in enumerate(results):
+    elec  = itemList_elec[i]  if i < len(itemList_elec)  else ''
+    food  = itemList_food[i]  if i < len(itemList_food)  else ''
+    house = itemList_house[i] if i < len(itemList_house) else ''
+    table.insert("", "end", values=(elec, row[4], row[5], food, row[1], row[2], house, row[7], row[8]))
+
 table.pack(pady=25)
 
-totalamountOfNutrition = 200
-totalamountOfElec = 200
-totalamountOfInventory = 200
-cr.execute("select quantity1 from Foods")
-amountOfNutrition = cr.fetchall()
-cr.execute("select Nutrition from Foods")
-nameOfNutrition = cr.fetchall()
-cr.execute("select quantity2 from Foods")
-amountOfElec = cr.fetchall()
-cr.execute("select Electricity from Foods")
-nameOfElec = cr.fetchall()
-cr.execute("select quantity3 from Foods")
-amountOfInventory = cr.fetchall()
-cr.execute("select Inventory from Foods")
-nameOfInventory = cr.fetchall()
-for i in range(len(amountOfNutrition)):
-    for j in range (len(nameOfNutrition)):
-        if amountOfNutrition[i][0] != '' and float(amountOfNutrition[i][0]) < 0.2 * totalamountOfNutrition:
-            messagebox.showerror('Alert',f'Amount of {nameOfNutrition[j][0]}')
-            mailAlert(amountOfNutrition[i][0],nameOfNutrition[j],totalamountOfNutrition*0.2)
-            break
-        else:
-            pass
+# ============ Low-Stock Alerts (one check per item, no nested loops) ============
+THRESHOLD = 0.2 * 200
 
-for i in range(len(amountOfElec)):
-    for j in range (len(nameOfElec)):
-        if amountOfElec[i][0] != '' and float(amountOfElec[i][0]) < 0.2 * totalamountOfElec:
-            messagebox.showerror('Alert',f'Amount of {nameOfElec[j][0]}')
-            mailAlert(amountOfElec[i][0],nameOfElec[j],totalamountOfElec*0.2)
-            break
-        else:
-            pass
-for i in range(len(amountOfInventory)):
-    for j in range (len(nameOfInventory)):
-        if amountOfInventory[i][0] != '' and float(amountOfInventory[i][0]) < 0.2 * totalamountOfInventory:
-            # item_name = nameOfInventory[j][0].strip("()'")
-            messagebox.showerror('Alert',f'Amount of {nameOfNutrition[j][0]}')
-            mailAlert(amountOfInventory[i][0],nameOfInventory[j],totalamountOfInventory*0.2)
-            break
-        else:
-            pass
-# # Create the text area
-# text_area = tk.Text(root, height=3, font=('tajawal',18))
-# text_area.pack()
+cr.execute("SELECT Nutrition, quantity1, Electricity, quantity2, Inventory, quantity3 FROM Foods")
+for i, (food_name, qty1, elec_name, qty2, house_name, qty3) in enumerate(cr.fetchall()):
+    food_label  = itemList_food[i]  if i < len(itemList_food)  else food_name
+    elec_label  = itemList_elec[i]  if i < len(itemList_elec)  else elec_name
+    house_label = itemList_house[i] if i < len(itemList_house) else house_name
 
-# # Create the "Add Item" button
-# add_item_button = tk.Button(root,bg=mainColor ,text="Add Item", command=add_item)
-# add_item_button.pack(pady=10)
+    if qty1 and float(qty1) < THRESHOLD:
+        messagebox.showerror('Alert', f'Low stock: {food_label}')
+        mailAlert(float(qty1), food_label, THRESHOLD)
 
+    if qty2 and float(qty2) < THRESHOLD:
+        messagebox.showerror('Alert', f'Low stock: {elec_label}')
+        mailAlert(float(qty2), elec_label, THRESHOLD)
+
+    if qty3 and float(qty3) < THRESHOLD:
+        messagebox.showerror('Alert', f'Low stock: {house_label}')
+        mailAlert(float(qty3), house_label, THRESHOLD)
 
 root.mainloop()
